@@ -1,426 +1,123 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#171A2E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>인터벌 타이머</title>
-<style>
-  :root{
-    --idle:#171A2E;
-    --work:#D31E45;
-    --rest:#0E6B6E;
-    --prep:#4A3E86;
-    --done:#1F2B22;
-    --ink:#FFFFFF;
-    --dim:rgba(255,255,255,.62);
-    --line:rgba(255,255,255,.22);
-    --field:var(--idle);
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family:ui-sans-serif,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Helvetica Neue",sans-serif;
-    background:var(--field);
-    color:var(--ink);
-    transition:background-color .35s ease;
-    display:flex;
-    flex-direction:column;
-    min-height:100svh;
-    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    overflow-x:hidden;
-  }
-  body[data-phase="work"]{--field:var(--work)}
-  body[data-phase="rest"]{--field:var(--rest)}
-  body[data-phase="prep"]{--field:var(--prep)}
-  body[data-phase="done"]{--field:var(--done)}
-
-  .stage{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:.4rem;
-    padding:2rem 1.25rem 1rem;
-    text-align:center;
-  }
-  .phase{
-    font-size:clamp(1.35rem,7vw,2rem);
-    font-weight:700;
-    letter-spacing:-.01em;
-    margin:0;
-  }
-  .clock{
-    font-size:clamp(5.5rem,32vw,11rem);
-    font-weight:800;
-    line-height:.92;
-    letter-spacing:-.05em;
-    font-variant-numeric:tabular-nums;
-    margin:.1em 0;
-  }
-  .meta{
-    font-size:1rem;
-    color:var(--dim);
-    font-variant-numeric:tabular-nums;
-    margin:0;
-  }
-  .bar{
-    width:min(560px,100%);
-    height:6px;
-    background:rgba(255,255,255,.2);
-    border-radius:99px;
-    overflow:hidden;
-    margin-top:1.4rem;
-  }
-  .bar span{
-    display:block;
-    height:100%;
-    width:0%;
-    background:var(--ink);
-    border-radius:99px;
-  }
-
-  .controls{
-    display:flex;
-    gap:.6rem;
-    width:min(560px,100%);
-    margin:1.6rem auto 0;
-  }
-  button{
-    font:inherit;
-    font-weight:700;
-    border-radius:14px;
-    border:1.5px solid var(--line);
-    padding:1.05rem 1rem;
-    cursor:pointer;
-    background:transparent;
-    color:var(--ink);
-    transition:transform .08s ease,background-color .15s ease;
-  }
-  button:active{transform:scale(.985)}
-  button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-  .primary{
-    flex:2;
-    background:var(--ink);
-    color:#12141F;
-    border-color:transparent;
-    font-size:1.1rem;
-  }
-  .ghost{flex:1}
-
-  .setup{
-    width:min(560px,100%);
-    margin:0 auto;
-    padding:1.25rem 1.25rem 2rem;
-  }
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:.55rem;
-  }
-  .field{
-    border:1.5px solid var(--line);
-    border-radius:14px;
-    padding:.7rem .8rem;
-  }
-  .field label{
-    display:block;
-    font-size:.82rem;
-    color:var(--dim);
-    margin-bottom:.15rem;
-  }
-  .field input{
-    width:100%;
-    border:0;
-    background:transparent;
-    color:var(--ink);
-    font:inherit;
-    font-size:1.35rem;
-    font-weight:700;
-    font-variant-numeric:tabular-nums;
-    padding:0;
-  }
-  .field input:focus{outline:none}
-  .field:focus-within{border-color:var(--ink)}
-  .toggles{
-    display:flex;
-    flex-wrap:wrap;
-    gap:1rem;
-    margin-top:.9rem;
-  }
-  .toggles label{
-    display:flex;
-    align-items:center;
-    gap:.45rem;
-    font-size:.95rem;
-    color:var(--dim);
-    cursor:pointer;
-  }
-  .toggles input{width:1.15rem;height:1.15rem;accent-color:#fff}
-  .total{
-    margin-top:.9rem;
-    font-size:.95rem;
-    color:var(--dim);
-    font-variant-numeric:tabular-nums;
-  }
-  .note{
-    margin:.9rem 0 0;
-    font-size:.85rem;
-    line-height:1.55;
-    color:var(--dim);
-  }
-  body.running .setup{display:none}
-  @media (prefers-reduced-motion:reduce){
-    *{transition:none!important}
-  }
-</style>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Champ</title>
+<link rel="stylesheet" href="app.css">
 </head>
-<body data-phase="idle">
+<body data-phase="idle" data-view="home">
 
-  <main class="stage">
-    <p class="phase" id="phase">시작 준비</p>
-    <p class="clock" id="clock">0:00</p>
-    <p class="meta" id="meta">라운드 –/–</p>
-    <div class="bar"><span id="bar"></span></div>
+<!-- keeps the audio session alive so cues still fire with the screen off -->
+<audio id="keepalive" src="assets/silence.wav" loop playsinline preload="auto"></audio>
 
-    <div class="controls">
-      <button class="primary" id="start">시작</button>
-      <button class="ghost" id="reset">처음으로</button>
+<!-- ================= TIMER ================= -->
+<main class="stage" id="stage">
+  <div class="stage-top">
+    <button class="icon" id="backToHome" aria-label="Back">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <p class="wname" id="wname"></p>
+  </div>
+
+  <p class="phase" id="phase">Ready</p>
+  <p class="clock" id="clock">0:00</p>
+  <p class="meta" id="meta">Round –/–</p>
+  <p class="upnext" id="upnext"></p>
+
+  <div class="bar"><span id="bar"></span></div>
+
+  <div class="controls">
+    <button class="primary" id="start">Start</button>
+    <button class="ghost" id="reset">Reset</button>
+  </div>
+</main>
+
+<!-- ================= HOME ================= -->
+<section class="sheet" id="home">
+  <header class="hero">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <h1>Champ</h1>
     </div>
-  </main>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="langEn" aria-pressed="true">EN</button>
+      <button type="button" id="langKo" aria-pressed="false">한국어</button>
+    </div>
+  </header>
 
-  <section class="setup" id="setup">
+  <div class="block">
+    <p class="eyebrow" id="ttlQuick">Quick start</p>
+    <div class="presets" id="presets"></div>
     <div class="grid">
       <div class="field">
-        <label for="work">운동 (초)</label>
-        <input id="work" type="number" inputmode="numeric" min="1" max="3600" value="60">
+        <label for="work" id="lblWork">Work</label>
+        <div class="fv"><input id="work" type="number" inputmode="numeric" min="1" max="3600" value="40"><span>s</span></div>
       </div>
       <div class="field">
-        <label for="rest">휴식 (초)</label>
-        <input id="rest" type="number" inputmode="numeric" min="0" max="3600" value="30">
+        <label for="rest" id="lblRest">Rest</label>
+        <div class="fv"><input id="rest" type="number" inputmode="numeric" min="0" max="3600" value="20"><span>s</span></div>
       </div>
       <div class="field">
-        <label for="rounds">라운드</label>
-        <input id="rounds" type="number" inputmode="numeric" min="1" max="99" value="7">
+        <label for="rounds" id="lblRounds">Rounds</label>
+        <div class="fv"><input id="rounds" type="number" inputmode="numeric" min="1" max="99" value="10"><span>×</span></div>
       </div>
     </div>
-
     <div class="toggles">
-      <label><input type="checkbox" id="skipLast" checked> 마지막 휴식 빼기</label>
-      <label><input type="checkbox" id="prep" checked> 5초 준비시간</label>
-      <label><input type="checkbox" id="voice"> 음성 안내</label>
+      <label><input type="checkbox" id="skipLast" checked> <span id="lblSkip">Skip final rest</span></label>
+      <label><input type="checkbox" id="prep" checked> <span id="lblPrep">5s countdown</span></label>
+      <label><input type="checkbox" id="voice"> <span id="lblVoice">Voice cues</span></label>
     </div>
-
     <p class="total" id="total"></p>
-    <p class="note">전환 3초 전에 짧은 예고음, 바뀔 때 알림음이 납니다. 화면을 켜둔 채로 두면 소리가 끊기지 않아요. 무음 모드에서는 소리가 안 날 수 있습니다.</p>
-  </section>
+    <button class="primary wide" id="go">Start</button>
+  </div>
 
-<script>
-(function(){
-  const $ = id => document.getElementById(id);
-  const el = {
-    phase:$('phase'), clock:$('clock'), meta:$('meta'), bar:$('bar'),
-    start:$('start'), reset:$('reset'),
-    work:$('work'), rest:$('rest'), rounds:$('rounds'),
-    skipLast:$('skipLast'), prep:$('prep'), voice:$('voice'),
-    total:$('total')
-  };
+  <div class="block">
+    <div class="block-head">
+      <p class="eyebrow" id="ttlCustom">My workouts</p>
+      <button class="link" id="newWorkout">+ <span id="lblNew">New</span></button>
+    </div>
+    <ul class="list" id="wlist"></ul>
+    <p class="empty" id="wempty"></p>
+  </div>
 
-  let plan = [], running = false, paused = true;
-  let elapsed = 0, anchor = 0, raf = null, wakeLock = null;
-  let segIndex = -1, lastTick = null;
+  <p class="foot" id="foot"></p>
+</section>
 
-  /* ---------- audio ---------- */
-  let ac = null;
-  function audio(){
-    if(!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
-    if(ac.state === 'suspended') ac.resume();
-    return ac;
-  }
-  function tone(freq, dur, when, gain){
-    const c = audio(), t = c.currentTime + (when||0);
-    const osc = c.createOscillator(), g = c.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain||0.35, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g).connect(c.destination);
-    osc.start(t); osc.stop(t + dur + 0.05);
-  }
-  const sound = {
-    tick(){ tone(880, 0.09, 0, 0.22); },
-    work(){ tone(1320, 0.16); tone(1320, 0.16, 0.2); },
-    rest(){ tone(520, 0.34); },
-    done(){ tone(660,0.2); tone(880,0.2,0.22); tone(1180,0.5,0.44); }
-  };
-  function say(text){
-    if(!el.voice.checked || !('speechSynthesis' in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR'; u.rate = 1.05;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }
+<!-- ================= EDITOR ================= -->
+<section class="sheet" id="editor">
+  <header class="ehead">
+    <button class="icon" id="editorBack" aria-label="Back">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <input id="ename" class="ename" type="text" maxlength="40" placeholder="Workout name">
+    <button class="link strong" id="saveWorkout" data-i18n="save">Save</button>
+  </header>
 
-  /* ---------- plan ---------- */
-  function cfg(){
-    const clamp = (v,min,max,def) => {
-      const n = parseInt(v,10);
-      return isNaN(n) ? def : Math.min(max, Math.max(min, n));
-    };
-    return {
-      work: clamp(el.work.value,1,3600,60),
-      rest: clamp(el.rest.value,0,3600,30),
-      rounds: clamp(el.rounds.value,1,99,7),
-      skipLast: el.skipLast.checked,
-      prep: el.prep.checked ? 5 : 0
-    };
-  }
-  function build(){
-    const c = cfg(), out = [];
-    if(c.prep) out.push({type:'prep', dur:c.prep, round:0});
-    for(let r=1; r<=c.rounds; r++){
-      out.push({type:'work', dur:c.work, round:r});
-      const last = r === c.rounds;
-      if(c.rest > 0 && !(last && c.skipLast)) out.push({type:'rest', dur:c.rest, round:r});
-    }
-    let acc = 0;
-    out.forEach(s => { s.start = acc; acc += s.dur; s.end = acc; });
-    return out;
-  }
-  const mmss = s => {
-    s = Math.max(0, Math.ceil(s));
-    return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
-  };
-  function preview(){
-    const p = build(), c = cfg();
-    const body = p.filter(s => s.type !== 'prep').reduce((a,s)=>a+s.dur,0);
-    el.total.textContent = '운동 시간 ' + mmss(body) + ' · ' + c.rounds + '라운드'
-      + (c.prep ? ' (준비 5초 별도)' : '');
-  }
+  <div class="block">
+    <p class="eyebrow" id="ttlSegs">Segments</p>
+    <ul class="segs" id="segs"></ul>
+    <div class="addrow">
+      <button class="add work" id="addWork">+ <span id="lblAddWork">Work</span></button>
+      <button class="add rest" id="addRest">+ <span id="lblAddRest">Rest</span></button>
+    </div>
+  </div>
 
-  /* ---------- wake lock ---------- */
-  async function lockScreen(){
-    try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
-  }
-  function unlockScreen(){ if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; } }
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible' && running && !paused) lockScreen();
-  });
+  <div class="block">
+    <div class="field row">
+      <label for="erepeat" id="lblRepeat">Repeat whole set</label>
+      <div class="fv"><input id="erepeat" type="number" inputmode="numeric" min="1" max="50" value="1"><span>×</span></div>
+    </div>
+    <p class="total" id="etotal"></p>
+    <button class="ghost wide" id="deleteWorkout" data-i18n="delete">Delete</button>
+  </div>
+</section>
 
-  /* ---------- render ---------- */
-  const NAME = {prep:'준비', work:'운동', rest:'휴식'};
-  function paint(){
-    const total = plan.length ? plan[plan.length-1].end : 0;
-
-    if(elapsed >= total){ finish(); return; }
-
-    let i = plan.findIndex(s => elapsed < s.end);
-    const seg = plan[i];
-    const remain = seg.end - elapsed;
-
-    if(i !== segIndex){
-      segIndex = i;
-      lastTick = null;
-      document.body.dataset.phase = seg.type;
-      el.phase.textContent = NAME[seg.type];
-      if(seg.type === 'work'){ sound.work(); say('운동'); }
-      else if(seg.type === 'rest'){ sound.rest(); say('휴식'); }
-    }
-
-    const whole = Math.ceil(remain);
-    if(whole !== lastTick){
-      if(lastTick !== null && whole <= 3 && whole >= 1) sound.tick();
-      lastTick = whole;
-    }
-
-    el.clock.textContent = mmss(remain);
-    const rounds = cfg().rounds;
-    el.meta.textContent = seg.type === 'prep'
-      ? '곧 시작합니다'
-      : '라운드 ' + seg.round + '/' + rounds + ' · 남은 시간 ' + mmss(total - elapsed);
-    el.bar.style.width = (elapsed/total*100).toFixed(2) + '%';
-  }
-
-  function loop(){
-    if(!running || paused) return;
-    elapsed = (performance.now() - anchor)/1000;
-    paint();
-    if(running) raf = requestAnimationFrame(loop);
-  }
-
-  function finish(){
-    running = false; paused = true;
-    cancelAnimationFrame(raf);
-    unlockScreen();
-    document.body.classList.remove('running');
-    document.body.dataset.phase = 'done';
-    el.phase.textContent = '완료';
-    el.clock.textContent = '0:00';
-    el.meta.textContent = '수고하셨습니다';
-    el.bar.style.width = '100%';
-    el.start.textContent = '다시 시작';
-    sound.done(); say('완료');
-    segIndex = -1;
-  }
-
-  function play(){
-    if(!running){
-      plan = build();
-      elapsed = 0; segIndex = -1; lastTick = null;
-      running = true;
-      document.body.classList.add('running');
-    }
-    paused = false;
-    anchor = performance.now() - elapsed*1000;
-    audio();
-    lockScreen();
-    el.start.textContent = '일시정지';
-    loop();
-  }
-  function pause(){
-    paused = true;
-    cancelAnimationFrame(raf);
-    unlockScreen();
-    el.start.textContent = '이어서';
-    el.phase.textContent = '일시정지';
-  }
-  function reset(){
-    running = false; paused = true;
-    cancelAnimationFrame(raf);
-    unlockScreen();
-    elapsed = 0; segIndex = -1; lastTick = null;
-    document.body.classList.remove('running');
-    document.body.dataset.phase = 'idle';
-    el.phase.textContent = '시작 준비';
-    el.clock.textContent = '0:00';
-    el.meta.textContent = '라운드 –/–';
-    el.bar.style.width = '0%';
-    el.start.textContent = '시작';
-    preview();
-  }
-
-  el.start.addEventListener('click', () => {
-    if(document.body.dataset.phase === 'done'){ reset(); play(); return; }
-    (running && !paused) ? pause() : play();
-  });
-  el.reset.addEventListener('click', reset);
-  [el.work, el.rest, el.rounds, el.skipLast, el.prep].forEach(n =>
-    n.addEventListener('input', preview));
-
-  document.addEventListener('keydown', e => {
-    if(e.target.tagName === 'INPUT') return;
-    if(e.code === 'Space'){ e.preventDefault(); el.start.click(); }
-    if(e.key.toLowerCase() === 'r') reset();
-  });
-
-  preview();
-})();
-</script>
+<script src="app.js"></script>
 </body>
 </html>
-
